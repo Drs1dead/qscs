@@ -4,11 +4,28 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from bot.db.models import User
+from bot.filters.access import AccessDenied
 from bot.keyboards.inline import main_menu_keyboard
 from bot.utils.formatters import format_main_menu
 
 router = Router(name="fallback")
 logger = logging.getLogger(__name__)
+
+
+@router.callback_query(AccessDenied())
+async def blocked_callback(callback: CallbackQuery) -> None:
+    pass
+
+
+@router.message(AccessDenied())
+async def blocked_message(message: Message) -> None:
+    pass
+
+
+@router.message(F.chat.type.in_({"group", "supergroup", "channel"}))
+async def ignore_public_chat_messages(message: Message) -> None:
+    """Bot is added to chats/channels; incoming messages there are ignored."""
+    pass
 
 
 @router.callback_query()
