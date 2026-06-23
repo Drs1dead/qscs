@@ -1,10 +1,10 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.filters import MagicData
 from aiogram.types import CallbackQuery, Message
 
 from bot.db.models import User
-from bot.filters.access import AccessDenied
 from bot.keyboards.inline import main_menu_keyboard
 from bot.utils.formatters import format_main_menu
 
@@ -12,12 +12,12 @@ router = Router(name="fallback")
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(AccessDenied())
+@router.callback_query(MagicData(F.access_denied.is_(True)))
 async def blocked_callback(callback: CallbackQuery) -> None:
     pass
 
 
-@router.message(AccessDenied())
+@router.message(MagicData(F.access_denied.is_(True)))
 async def blocked_message(message: Message) -> None:
     pass
 
