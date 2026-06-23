@@ -3,6 +3,12 @@ from datetime import datetime
 from bot.db.models import Log, User
 
 
+def format_interval(seconds: int) -> str:
+    if seconds >= 60 and seconds % 60 == 0:
+        return f"{seconds // 60} мин"
+    return f"{seconds} сек"
+
+
 def format_main_menu(is_super: bool) -> str:
     role = "👑 Супер-админ" if is_super else "💎 Админ"
     return (

@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.db.models import SendMode
+from bot.utils.formatters import format_interval
 from bot.utils.pagination import build_page_buttons
 
 
@@ -66,7 +67,7 @@ def post_settings_keyboard(post_id: int, interval: int | None, default_interval:
     current = interval or default_interval
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"⏱ Интервал: {current} сек", callback_data=f"post:interval:{post_id}")],
+            [InlineKeyboardButton(text=f"⏱ Интервал: {format_interval(current)}", callback_data=f"post:interval:{post_id}")],
             [InlineKeyboardButton(text="🚫 Исключения чатов", callback_data=f"post:exclude:{post_id}:0")],
             [back_button(f"post:view:{post_id}"), close_button()],
         ]
@@ -74,13 +75,13 @@ def post_settings_keyboard(post_id: int, interval: int | None, default_interval:
 
 
 def interval_keyboard(post_id: int) -> InlineKeyboardMarkup:
-    intervals = [5, 10, 30, 60, 120, 300]
+    intervals = [6000, 7200, 10800, 12000]  # 100, 120, 180, 200 мин
     rows = []
     row: list[InlineKeyboardButton] = []
     for sec in intervals:
-        label = f"{sec} сек" if sec < 60 else f"{sec // 60} мин"
+        label = format_interval(sec)
         row.append(InlineKeyboardButton(text=label, callback_data=f"post:set_interval:{post_id}:{sec}"))
-        if len(row) == 3:
+        if len(row) == 2:
             rows.append(row)
             row = []
     if row:
@@ -240,7 +241,7 @@ def logs_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
 def settings_keyboard(default_interval: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"⏱ Интервал по умолчанию: {default_interval} сек", callback_data="settings:interval")],
+            [InlineKeyboardButton(text=f"⏱ Интервал по умолчанию: {format_interval(default_interval)}", callback_data="settings:interval")],
             [back_button("menu:main"), close_button()],
         ]
     )

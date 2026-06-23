@@ -10,6 +10,7 @@ from bot.db.session import async_session_factory
 from bot.keyboards.inline import broadcast_confirm_keyboard, broadcast_progress_keyboard
 from bot.services.broadcast_service import BroadcastService
 from bot.services.store_service import store_service
+from bot.utils.formatters import format_interval
 
 router = Router(name="broadcast")
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ async def cb_broadcast_confirm(callback: CallbackQuery) -> None:
         f"🚀 <b>Размножение поста #{post_id}</b>\n\n"
         f"└─ Чатов: <b>{target}</b>\n"
         f"└─ Исключено: <b>{excluded}</b>\n"
-        f"└─ Интервал: <b>{interval} сек</b>\n"
+        f"└─ Интервал: <b>{format_interval(interval)}</b>\n"
         f"└─ Режим: {mode_text}",
         reply_markup=broadcast_confirm_keyboard(post_id),
         parse_mode="HTML",

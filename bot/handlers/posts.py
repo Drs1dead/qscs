@@ -16,7 +16,7 @@ from bot.keyboards.inline import (
 from bot.services.album_collector import album_collector
 from bot.services.post_service import save_post_from_messages
 from bot.states.fsm import PostStates
-from bot.utils.formatters import format_post_saved, format_post_view
+from bot.utils.formatters import format_interval, format_post_saved, format_post_view
 from bot.utils.pagination import paginate
 
 router = Router(name="posts")
@@ -266,7 +266,7 @@ async def cb_set_interval(callback: CallbackQuery) -> None:
         if interval:
             await store_service.set_default_interval(interval)
         await callback.message.edit_text(
-            f"⚙️ <b>Глобальные настройки</b>\n✅ Интервал по умолчанию: {interval or settings.default_interval} сек",
+            f"⚙️ <b>Глобальные настройки</b>\n✅ Интервал по умолчанию: {format_interval(interval or settings.default_interval)}",
             reply_markup=settings_keyboard(interval or settings.default_interval),
             parse_mode="HTML",
         )
