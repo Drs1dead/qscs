@@ -9,7 +9,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.config import get_settings
 from bot.db.session import close_db, init_db
-from bot.handlers import admin, broadcast, chats, fallback, posts, start
+from bot.handlers import admin, blocked, broadcast, chats, fallback, posts, start
 from bot.handlers.broadcast import set_broadcast_service
 from bot.middlewares.auth import AuthMiddleware
 from bot.services.broadcast_service import BroadcastService
@@ -41,6 +41,7 @@ async def main() -> None:
     chat_monitor = ChatMonitorService(bot)
     await chat_monitor.start()
 
+    dp.include_router(blocked.router)
     dp.include_router(start.router)
     dp.include_router(admin.router)
     dp.include_router(posts.router)

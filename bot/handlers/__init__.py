@@ -1,3 +1,3 @@
-from bot.handlers import admin, broadcast, chats, fallback, posts, start
+from bot.handlers import admin, blocked, broadcast, chats, fallback, posts, start
 
-__all__ = ["admin", "broadcast", "chats", "fallback", "posts", "start"]
+__all__ = ["admin", "blocked", "broadcast", "chats", "fallback", "posts", "start"]
