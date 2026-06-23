@@ -103,7 +103,8 @@ async def cb_settings_interval(callback: CallbackQuery) -> None:
     from bot.keyboards.inline import interval_keyboard
 
     await callback.message.edit_text(
-        "⏱ <b>Интервал по умолчанию</b>\n<i>Применяется к постам без индивидуального интервала</i>",
+        "⏱ <b>Интервал повтора по умолчанию</b>\n"
+        "<i>Как часто авто-рассылка повторяет отправку во все чаты</i>",
         reply_markup=interval_keyboard(0),
         parse_mode="HTML",
     )

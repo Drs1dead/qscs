@@ -63,11 +63,20 @@ def post_menu_keyboard(post_id: int, send_mode: str = SendMode.FORWARD.value) ->
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def post_settings_keyboard(post_id: int, interval: int | None, default_interval: int) -> InlineKeyboardMarkup:
+def post_settings_keyboard(
+    post_id: int,
+    interval: int | None,
+    default_interval: int,
+    *,
+    auto_enabled: bool = False,
+) -> InlineKeyboardMarkup:
     current = interval or default_interval
+    auto_label = "⏹ Остановить авто-рассылку" if auto_enabled else "🔁 Запустить авто-рассылку"
+    auto_action = f"post:auto_stop:{post_id}" if auto_enabled else f"post:auto_start:{post_id}"
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"⏱ Интервал: {format_interval(current)}", callback_data=f"post:interval:{post_id}")],
+            [InlineKeyboardButton(text=f"⏱ Повтор каждые: {format_interval(current)}", callback_data=f"post:interval:{post_id}")],
+            [InlineKeyboardButton(text=auto_label, callback_data=auto_action)],
             [InlineKeyboardButton(text="🚫 Исключения чатов", callback_data=f"post:exclude:{post_id}:0")],
             [back_button(f"post:view:{post_id}"), close_button()],
         ]
@@ -126,7 +135,7 @@ def broadcast_progress_keyboard(job_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="⏹ Остановить рассылку", callback_data=f"broadcast:stop:{job_id}")],
-            [close_button()],
+            [InlineKeyboardButton(text="❌ Закрыть и остановить", callback_data=f"broadcast:close:{job_id}")],
         ]
     )
 
@@ -241,7 +250,7 @@ def logs_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
 def settings_keyboard(default_interval: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f"⏱ Интервал по умолчанию: {format_interval(default_interval)}", callback_data="settings:interval")],
+            [InlineKeyboardButton(text=f"⏱ Повтор по умолчанию: {format_interval(default_interval)}", callback_data="settings:interval")],
             [back_button("menu:main"), close_button()],
         ]
     )

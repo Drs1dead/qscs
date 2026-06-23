@@ -36,6 +36,7 @@ async def main() -> None:
 
     broadcast_service = BroadcastService(bot)
     set_broadcast_service(broadcast_service)
+    await broadcast_service.restore_auto_broadcasts()
 
     chat_monitor = ChatMonitorService(bot)
     await chat_monitor.start()

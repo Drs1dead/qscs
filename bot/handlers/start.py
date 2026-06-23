@@ -44,6 +44,20 @@ async def cb_main_menu(callback: CallbackQuery, is_super_admin: bool) -> None:
     await callback.answer()
 
 
+@router.message(Command("close"))
+async def cmd_close(message: Message, db_user: User) -> None:
+    from bot.handlers.broadcast import get_broadcast_service
+    from bot.services.store_service import store_service
+
+    active = await store_service.get_active_broadcast(db_user.id)
+    service = get_broadcast_service()
+    if active and service:
+        await service.stop_manual_broadcast(active, db_user.id)
+        await message.answer(f"⏹ Принудительная рассылка #{active} остановлена.")
+        return
+    await message.answer("Нет активной принудительной рассылки.")
+
+
 @router.callback_query(F.data == "menu:close")
 async def cb_close_menu(callback: CallbackQuery) -> None:
     try:

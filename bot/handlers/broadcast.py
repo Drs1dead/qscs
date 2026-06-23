@@ -24,6 +24,10 @@ def set_broadcast_service(service: BroadcastService) -> None:
     _broadcast_service = service
 
 
+def get_broadcast_service() -> BroadcastService | None:
+    return _broadcast_service
+
+
 @router.callback_query(F.data.startswith("broadcast:confirm:"))
 async def cb_broadcast_confirm(callback: CallbackQuery) -> None:
     post_id = int(callback.data.split(":")[-1])
@@ -39,7 +43,7 @@ async def cb_broadcast_confirm(callback: CallbackQuery) -> None:
         return
 
     target = total - excluded
-    interval = post.interval_seconds or await store_service.get_default_interval(settings.default_interval)
+    repeat_interval = post.interval_seconds or await store_service.get_default_interval(settings.default_interval)
 
     if post.send_mode == "copy":
         mode_text = "✏️ <b>Copy</b> — можно добавить подпись"
@@ -49,11 +53,13 @@ async def cb_broadcast_confirm(callback: CallbackQuery) -> None:
         mode_text = "🔄 <b>Forward</b> — Premium-эмодзи сохраняются"
 
     await callback.message.edit_text(
-        f"🚀 <b>Размножение поста #{post_id}</b>\n\n"
+        f"🚀 <b>Принудительная рассылка поста #{post_id}</b>\n\n"
         f"└─ Чатов: <b>{target}</b>\n"
         f"└─ Исключено: <b>{excluded}</b>\n"
-        f"└─ Интервал: <b>{format_interval(interval)}</b>\n"
-        f"└─ Режим: {mode_text}",
+        f"└─ Пауза между чатами: <b>{format_interval(settings.chat_send_delay)}</b>\n"
+        f"└─ Режим: {mode_text}\n\n"
+        f"💡 Для повторяющейся рассылки включите «Авто-рассылку» в настройках поста "
+        f"(интервал повтора: {format_interval(repeat_interval)}).",
         reply_markup=broadcast_confirm_keyboard(post_id),
         parse_mode="HTML",
     )
@@ -69,19 +75,23 @@ async def cb_broadcast_start(callback: CallbackQuery, db_user: User) -> None:
     post_id = int(callback.data.split(":")[-1])
     active = await store_service.get_active_broadcast(db_user.id)
     if active:
-        await callback.answer("Уже идёт рассылка. Остановите её сначала.", show_alert=True)
+        await callback.answer(
+            "Уже идёт принудительная рассылка. Нажмите «Остановить» или отправьте /close",
+            show_alert=True,
+        )
         return
 
     try:
-        job_id = await _broadcast_service.start_broadcast(post_id, db_user.id)
+        job_id = await _broadcast_service.start_manual_broadcast(post_id, db_user.id)
     except ValueError as exc:
         await callback.answer(str(exc), show_alert=True)
         return
 
     await callback.message.edit_text(
-        f"📤 <b>Рассылка #{job_id} запущена</b>\n"
+        f"📤 <b>Принудительная рассылка #{job_id}</b>\n"
         f"└─ Пост: #{post_id}\n"
-        f"└─ Статус: в процессе…",
+        f"└─ Статус: отправка во все чаты…\n\n"
+        f"⏹ Остановить — кнопка ниже или команда /close",
         reply_markup=broadcast_progress_keyboard(job_id),
         parse_mode="HTML",
     )
@@ -95,9 +105,27 @@ async def cb_broadcast_stop(callback: CallbackQuery, db_user: User) -> None:
         return
 
     job_id = int(callback.data.split(":")[-1])
-    await _broadcast_service.stop_broadcast(job_id, db_user.id)
+    await _broadcast_service.stop_manual_broadcast(job_id, db_user.id)
     await callback.message.edit_text(
         f"⏹ <b>Рассылка #{job_id}</b>\n└─ Остановка…",
         parse_mode="HTML",
     )
     await callback.answer("Остановлено")
+
+
+@router.callback_query(F.data.startswith("broadcast:close:"))
+async def cb_broadcast_close(callback: CallbackQuery, db_user: User) -> None:
+    if _broadcast_service is None:
+        await callback.answer("Сервис не инициализирован", show_alert=True)
+        return
+
+    job_id = int(callback.data.split(":")[-1])
+    active = await store_service.get_active_broadcast(db_user.id)
+    if active == job_id:
+        await _broadcast_service.stop_manual_broadcast(job_id, db_user.id)
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.answer("Закрыто")

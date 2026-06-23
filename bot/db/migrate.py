@@ -14,6 +14,8 @@ MIGRATIONS = [
 
     "ALTER TABLE posts ADD COLUMN copy_caption TEXT",
 
+    "ALTER TABLE posts ADD COLUMN auto_broadcast_enabled BOOLEAN DEFAULT 0",
+
 ]
 
 

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     default_interval: int = 6000
 
+    chat_send_delay: int = 3
+
     chat_monitor_interval: int = 600
 
 

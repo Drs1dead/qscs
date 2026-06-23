@@ -229,6 +229,21 @@ class PostRepository:
         )
         await self.session.commit()
 
+    async def set_auto_broadcast(self, post_id: int, enabled: bool) -> None:
+        await self.session.execute(
+            update(Post).where(Post.id == post_id).values(auto_broadcast_enabled=enabled)
+        )
+        await self.session.commit()
+
+    async def list_auto_broadcast(self) -> list[Post]:
+        stmt = (
+            select(Post)
+            .where(Post.auto_broadcast_enabled.is_(True))
+            .options(selectinload(Post.excluded_chats))
+        )
+        result = await self.session.scalars(stmt)
+        return list(result.all())
+
     async def set_send_mode(self, post_id: int, send_mode: str) -> None:
         await self.session.execute(
             update(Post).where(Post.id == post_id).values(send_mode=send_mode)

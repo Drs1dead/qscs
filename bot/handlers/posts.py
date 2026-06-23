@@ -13,7 +13,9 @@ from bot.keyboards.inline import (
     post_menu_keyboard,
     settings_keyboard,
 )
+from bot.handlers.broadcast import get_broadcast_service
 from bot.services.album_collector import album_collector
+from bot.services.store_service import store_service
 from bot.services.post_service import save_post_from_messages
 from bot.states.fsm import PostStates
 from bot.utils.formatters import format_interval, format_post_saved, format_post_view
@@ -236,7 +238,12 @@ async def cb_post_settings(callback: CallbackQuery) -> None:
 
     await callback.message.edit_text(
         f"⚙️ <b>Настройки поста #{post_id}</b>",
-        reply_markup=post_settings_keyboard(post_id, post.interval_seconds, settings.default_interval),
+        reply_markup=post_settings_keyboard(
+            post_id,
+            post.interval_seconds,
+            settings.default_interval,
+            auto_enabled=post.auto_broadcast_enabled,
+        ),
         parse_mode="HTML",
     )
     await callback.answer()
@@ -246,7 +253,8 @@ async def cb_post_settings(callback: CallbackQuery) -> None:
 async def cb_post_interval(callback: CallbackQuery) -> None:
     post_id = int(callback.data.split(":")[-1])
     await callback.message.edit_text(
-        "⏱ <b>Выберите интервал между чатами:</b>",
+        "⏱ <b>Интервал повтора авто-рассылки:</b>\n"
+        "<i>Каждые N минут пост отправляется во все чаты и повторяется.</i>",
         reply_markup=interval_keyboard(post_id),
         parse_mode="HTML",
     )
@@ -266,7 +274,7 @@ async def cb_set_interval(callback: CallbackQuery) -> None:
         if interval:
             await store_service.set_default_interval(interval)
         await callback.message.edit_text(
-            f"⚙️ <b>Глобальные настройки</b>\n✅ Интервал по умолчанию: {format_interval(interval or settings.default_interval)}",
+            f"⚙️ <b>Глобальные настройки</b>\n✅ Повтор по умолчанию: {format_interval(interval or settings.default_interval)}",
             reply_markup=settings_keyboard(interval or settings.default_interval),
             parse_mode="HTML",
         )
@@ -281,11 +289,82 @@ async def cb_set_interval(callback: CallbackQuery) -> None:
     from bot.keyboards.inline import post_settings_keyboard
 
     await callback.message.edit_text(
-        f"⚙️ <b>Настройки поста #{post_id}</b>\n✅ Интервал обновлён",
-        reply_markup=post_settings_keyboard(post_id, post.interval_seconds if post else interval, settings.default_interval),
+        f"⚙️ <b>Настройки поста #{post_id}</b>\n✅ Интервал повтора обновлён",
+        reply_markup=post_settings_keyboard(
+            post_id,
+            post.interval_seconds if post else interval,
+            settings.default_interval,
+            auto_enabled=post.auto_broadcast_enabled if post else False,
+        ),
         parse_mode="HTML",
     )
     await callback.answer("Сохранено")
+
+
+@router.callback_query(F.data.startswith("post:auto_start:"))
+async def cb_auto_start(callback: CallbackQuery, db_user: User) -> None:
+    post_id = int(callback.data.split(":")[-1])
+    service = get_broadcast_service()
+    if service is None:
+        await callback.answer("Сервис не инициализирован", show_alert=True)
+        return
+
+    async with async_session_factory() as session:
+        repo = PostRepository(session)
+        post = await repo.get(post_id)
+        if post is None:
+            await callback.answer("Пост не найден", show_alert=True)
+            return
+
+    try:
+        await service.start_auto_broadcast(post_id, db_user.id)
+    except ValueError as exc:
+        await callback.answer(str(exc), show_alert=True)
+        return
+
+    interval = post.interval_seconds or await store_service.get_default_interval(settings.default_interval)
+    from bot.keyboards.inline import post_settings_keyboard
+
+    await callback.message.edit_text(
+        f"🔁 <b>Авто-рассылка запущена</b> (пост #{post_id})\n\n"
+        f"└─ Повтор каждые: <b>{format_interval(interval)}</b>\n"
+        f"└─ Сейчас отправляется во все чаты…\n\n"
+        f"Остановить — в настройках поста или /close не нужен (это не принудительная).",
+        reply_markup=post_settings_keyboard(
+            post_id, post.interval_seconds, settings.default_interval, auto_enabled=True
+        ),
+        parse_mode="HTML",
+    )
+    await callback.answer("🔁 Авто-рассылка запущена")
+
+
+@router.callback_query(F.data.startswith("post:auto_stop:"))
+async def cb_auto_stop(callback: CallbackQuery) -> None:
+    post_id = int(callback.data.split(":")[-1])
+    service = get_broadcast_service()
+    if service is None:
+        await callback.answer("Сервис не инициализирован", show_alert=True)
+        return
+
+    await service.stop_auto_broadcast(post_id)
+
+    async with async_session_factory() as session:
+        repo = PostRepository(session)
+        post = await repo.get(post_id)
+
+    from bot.keyboards.inline import post_settings_keyboard
+
+    await callback.message.edit_text(
+        f"⏹ <b>Авто-рассылка остановлена</b> (пост #{post_id})",
+        reply_markup=post_settings_keyboard(
+            post_id,
+            post.interval_seconds if post else None,
+            settings.default_interval,
+            auto_enabled=False,
+        ),
+        parse_mode="HTML",
+    )
+    await callback.answer("Остановлено")
 
 
 @router.callback_query(F.data.startswith("post:exclude:"))
@@ -342,6 +421,9 @@ async def cb_toggle_exclude(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("post:delete:"))
 async def cb_delete_post(callback: CallbackQuery, db_user: User) -> None:
     post_id = int(callback.data.split(":")[-1])
+    service = get_broadcast_service()
+    if service:
+        await service.stop_auto_broadcast(post_id)
     async with async_session_factory() as session:
         repo = PostRepository(session)
         log_repo = LogRepository(session)

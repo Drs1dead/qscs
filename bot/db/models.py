@@ -83,6 +83,7 @@ class Post(Base):
     send_mode: Mapped[str] = mapped_column(String(16), default=SendMode.FORWARD.value)
     copy_caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    auto_broadcast_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     owner: Mapped["User"] = relationship(back_populates="posts")
