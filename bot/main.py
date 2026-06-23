@@ -9,7 +9,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.config import get_settings
 from bot.db.session import close_db, init_db
-from bot.handlers import admin, broadcast, chats, posts, start
+from bot.handlers import admin, broadcast, chats, fallback, posts, start
 from bot.handlers.broadcast import set_broadcast_service
 from bot.middlewares.auth import AuthMiddleware
 from bot.services.broadcast_service import BroadcastService
@@ -46,6 +46,7 @@ async def main() -> None:
     dp.include_router(posts.router)
     dp.include_router(broadcast.router)
     dp.include_router(chats.router)
+    dp.include_router(fallback.router)
 
     logger.info("Bot starting (SQLite + in-memory storage)…")
     try:

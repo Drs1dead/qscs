@@ -45,11 +45,11 @@ class AuthMiddleware(BaseMiddleware):
             if db_user is None or not db_user.is_active:
                 if isinstance(event, CallbackQuery):
                     await event.answer("⛔ Нет доступа", show_alert=True)
-                    return None
+                    return True
                 if isinstance(event, Message) and event.text and event.text.startswith("/"):
                     await event.answer("⛔ У вас нет доступа к этому боту.")
-                    return None
-                return None
+                    return True
+                return True
 
             data["db_user"] = db_user
             data["is_super_admin"] = db_user.is_super_admin or is_super
